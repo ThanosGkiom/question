@@ -1,0 +1,14 @@
+/**
+ * Global CSS Layer Cascade Order
+ *
+ * Precedence Order (Lowest -> Highest):
+ * 1. reset       - Foundation resets (highest chance to be overwritten, rarely touched)
+ * 2. config      - Global custom property design tokens
+ * 3. colors      - Palette and theme definitions
+ * 4. base        - Generic document & element foundations
+ * 5. typography  - Font scales, headings, inline text
+ * 6. components  - UI components & patterns (most touched day-to-day)
+ * 7. utilities   - Single-purpose utility helper classes
+ * 8. overrides   - Hotfixes & state overrides (highest priority, least easily overwritten)
+ */
+@layer reset, config, colors, base, typography, components, utilities;

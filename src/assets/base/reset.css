@@ -1,0 +1,124 @@
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 1rem;
+  }
+
+  input,
+  textarea {
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+  }
+
+  address {
+    font: inherit;
+  }
+
+  ins {
+    text-decoration: none;
+  }
+
+  [popover] {
+    border: unset;
+  }
+
+  ol,
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    list-style: none;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  button {
+    background: unset;
+    border: unset;
+    cursor: pointer;
+    text-transform: inherit;
+    text-align: start;
+  }
+
+  a,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  b,
+  strong {
+    font-variation-settings: inherit;
+  }
+
+  blockquote {
+    margin: unset;
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  [type='checkbox'],
+  [type='radio'] {
+    appearance: unset;
+  }
+
+  dialog {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-width: none;
+    max-height: none;
+    width: auto;
+    height: auto;
+  }
+
+  details summary {
+    cursor: pointer;
+  }
+
+  details::marker,
+  details::-webkit-details-marker {
+    display: none;
+  }
+
+  fieldset {
+    border: none;
+  }
+
+  input[type='search']::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  iframe {
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    height: auto;
+  }
+
+  :focus,
+  :focus-visible {
+    outline: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}

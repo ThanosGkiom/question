@@ -1,0 +1,43 @@
+@layer utilities {
+  /* ==========================================================================
+     Utilities Layer
+     Single-purpose helper classes that apply specific styling.
+     ========================================================================== */
+
+  /* Accessible hidden utility */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .bg-barber-pole {
+    background-image: linear-gradient(
+      -45deg,
+      var(--color-primary-dark) 25%,
+      var(--color-primary) 25%,
+      var(--color-primary) 50%,
+      var(--color-primary-dark) 50%,
+      var(--color-primary-dark) 75%,
+      var(--color-primary) 75%,
+      var(--color-primary) 100%
+    );
+    background-size: 60px 60px;
+    animation: barber-pole 3s linear infinite;
+  }
+}
+
+@keyframes barber-pole {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 60px 60px;
+  }
+}

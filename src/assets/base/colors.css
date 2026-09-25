@@ -1,0 +1,30 @@
+@layer colors {
+  :root {
+    /* Soft Neutrals (Off-Black & Off-White) */
+    --color-black: #161a1d; /* Deep slate charcoal / rich soft black */
+    --color-white: #fbfbfa; /* Warm alabaster / soft off-white */
+
+    /* Palette */
+    --color-primary-dark: #8B1E2D;
+    --color-primary: #E63946;
+    --color-accent: #F4D35E;
+    --color-secondary: #457B9D;
+
+    /* Status Colors */
+    --color-success: #15803d;
+    --color-success-bg: #f0fdf4;
+    --color-error: #b91c1c;
+    --color-error-bg: #fef2f2;
+
+    /* Semantic Aliases */
+    --color-bg: var(--color-white);
+    --color-surface: #ffffff;
+    --color-text: var(--color-black);
+    --color-text-muted: #5e6d82;
+    --color-border: #e2e8f0;
+
+    --color-focus: #457B9D;
+    --color-selection-bg: #F4D35E;
+    --color-selection-text: #8B1E2D;
+  }
+}
