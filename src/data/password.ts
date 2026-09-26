@@ -5,7 +5,7 @@
 /**
  * The password required to unlock the questionnaire.
  */
-export const APP_PASSWORD = 'Angel&Soni'
+export const APP_PASSWORD = 'zj4911'
 
 /**
  * Debugger / Dev Mode Toggle:

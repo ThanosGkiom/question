@@ -16,12 +16,12 @@ export interface CalendarEventConfig {
 }
 
 export const calendarConfig: CalendarEventConfig = {
-  title: 'Our Anniversary',
+  title: 'Our Anniversary Z+T',
   details: 'Annual celebration of our special day',
-  location: 'My house <3',
+  location: 'TBD',
   recurrence: 'RRULE:FREQ=YEARLY',
   buttonText: 'Add to Google Calendar',
-  dateLabel: 'Anniversary Date:',
-  inviteEmail: 'your-email@example.com',
+  dateLabel: 'Our anniversary date:',
+  inviteEmail: 'thanosgkiomisis32@gmail.com',
   showAsBusy: true,
 }

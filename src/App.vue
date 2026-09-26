@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { questions } from './data/questions'
+import { questions as rawQuestions } from './data/questions'
 import { seriousQuestion } from './data/serious-question'
 import { calendarConfig } from './data/calendar'
 import { APP_PASSWORD, IS_DEBUG_MODE } from './data/password'
 import PixelAvatars, { type Expression } from './components/PixelAvatars.vue'
+import PostAcceptance from './components/PostAcceptance.vue'
 
 // Local Timezone Date Formatter (YYYY-MM-DD)
 function getLocalDateString(): string {
@@ -15,10 +16,40 @@ function getLocalDateString(): string {
   return `${year}-${month}-${day}`
 }
 
+// Shuffle an array in-place (Fisher-Yates) and return it
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+// Shuffle question order (except last) and each question's options — runs once on load
+function prepareQuestions(raw: typeof rawQuestions) {
+  // Shuffle options for every question except the last (serious) one
+  const prepared = raw.map((q, idx) => {
+    if (idx === raw.length - 1) return q
+    const correctOption = q.options[q.correctAnswerIndex]
+    const shuffledOptions = shuffle([...q.options])
+    return {
+      ...q,
+      options: shuffledOptions,
+      correctAnswerIndex: shuffledOptions.indexOf(correctOption),
+    }
+  })
+  // Shuffle question order, keeping the last one at the end
+  const last = prepared[prepared.length - 1]
+  const rest = shuffle(prepared.slice(0, -1))
+  return [...rest, last]
+}
+
+const questions = prepareQuestions(rawQuestions)
+
 // App State
 const isUnlocked = ref(IS_DEBUG_MODE)
 const password = ref('')
-const passwordError = ref('')
+
 
 // Questionnaire State
 const currentQuestionIndex = ref(0)
@@ -31,9 +62,10 @@ const currentQuestion = computed(() => {
 
 // Serious Question State
 const isSeriousQuestion = computed(
-  () => currentQuestionIndex.value >= questions.length && !isLoadingSuspense.value
+  () => currentQuestionIndex.value >= questions.length && !isLoadingSuspense.value,
 )
 const isAccepted = ref(false)
+const isNoScreen = ref(false)
 const yesScale = ref(1)
 const noButtonPosition = ref({ x: 0, y: 0 })
 const noDodgeCount = ref(0)
@@ -41,23 +73,62 @@ const noDodgeCount = ref(0)
 // Optional Manual Animation Preview Override for Dev
 const devMoodOverride = ref<Expression | null>(null)
 
+// Transient flash when a correct answer is selected
+const isCorrectFlash = ref(false)
+// Transient flash when a wrong answer is selected
+const isWrongFlash = ref(false)
+
+// Sequenced animation after YES is pressed:
+// pause → him-rose (him holds rose, her waits) → her-kiss (her blows kiss)
+type AcceptedStep = 'pause' | 'him-rose' | 'her-kiss'
+const acceptedStep = ref<AcceptedStep>('pause')
+let acceptedTimers: ReturnType<typeof setTimeout>[] = []
+
+function startAcceptedSequence() {
+  acceptedTimers.forEach(clearTimeout)
+  acceptedTimers = []
+  acceptedStep.value = 'pause'
+
+  const t1 = setTimeout(() => {
+    acceptedStep.value = 'him-rose' // him gives rose; her switches to waiting
+    const t2 = setTimeout(() => {
+      acceptedStep.value = 'her-kiss' // her blows a kiss
+    }, 1500) // matches play-3-once 1.5s duration
+    acceptedTimers.push(t2)
+  }, 800)
+  acceptedTimers.push(t1)
+}
+
 // Dynamic Pixel Avatar Moods
 const avatarHimMood = computed<Expression>(() => {
   if (devMoodOverride.value) return devMoodOverride.value
-  if (isAccepted.value) return 'jump'
+  if (isCorrectFlash.value) return 'happy' // him celebrates correct with happy
+  if (isWrongFlash.value) return 'question'
+  if (isAccepted.value) {
+    // pause: both jump; him-rose: him holds rose (frozen on last frame); her-kiss: him stays
+    return acceptedStep.value === 'pause' ? 'jump' : 'rose'
+  }
+  if (isNoScreen.value) return 'sad'
   if (isLoadingSuspense.value) return 'question'
   if (isSeriousQuestion.value) {
-    return noDodgeCount.value > 0 ? 'sad' : 'rose'
+    return noDodgeCount.value > 0 ? 'sad' : 'idle'
   }
   return 'idle'
 })
 
 const avatarHerMood = computed<Expression>(() => {
   if (devMoodOverride.value) return devMoodOverride.value
-  if (isAccepted.value) return 'jump'
+  if (isCorrectFlash.value) return 'jump'
+  if (isWrongFlash.value) return 'question'
+  if (isAccepted.value) {
+    if (acceptedStep.value === 'pause') return 'jump' // brief jump
+    if (acceptedStep.value === 'him-rose') return 'question' // waiting while him gives rose
+    return 'rose' // blow-kiss
+  }
+  if (isNoScreen.value) return 'sad' // no
   if (isLoadingSuspense.value) return 'question'
   if (isSeriousQuestion.value) {
-    return noDodgeCount.value > 0 ? 'happy' : 'idle'
+    return noDodgeCount.value > 0 ? 'sad' : 'idle'
   }
   return 'idle'
 })
@@ -85,10 +156,8 @@ function handlePasswordSubmit() {
   if (!password.value) return
   if (password.value === APP_PASSWORD) {
     isUnlocked.value = true
-    passwordError.value = ''
     triggerToast('Unlocked! Welcome', 'success')
   } else {
-    passwordError.value = 'Incorrect password'
     triggerToast('Incorrect password!', 'error')
   }
 }
@@ -100,11 +169,13 @@ function handleSelectOption(index: number) {
 
   if (index === currentQ.correctAnswerIndex) {
     triggerToast('Correct!', 'success', 1500)
+    isCorrectFlash.value = true
 
     const isLastQuestion = currentQuestionIndex.value === questions.length - 1
 
     setTimeout(() => {
       selectedAnswer.value = null
+      isCorrectFlash.value = false
 
       if (isLastQuestion) {
         // Dramatic suspense before the Serious Question
@@ -116,17 +187,24 @@ function handleSelectOption(index: number) {
       } else {
         currentQuestionIndex.value++
       }
-    }, 500)
+    }, 900) // longer delay so the jump animation is visible
   } else {
     triggerToast('Incorrect, try again.', 'error', 1500)
+    isWrongFlash.value = true
     setTimeout(() => {
       selectedAnswer.value = null
-    }, 600)
+      isWrongFlash.value = false
+    }, 800)
   }
 }
 
 function handleNoDodge() {
   noDodgeCount.value++
+
+  if (noDodgeCount.value >= 20) {
+    isNoScreen.value = true
+    return
+  }
 
   // Grow YES button without an upper limit
   yesScale.value += 0.15
@@ -144,6 +222,12 @@ function handleNoDodge() {
 function handleYesClick() {
   isAccepted.value = true
   triggerToast('Accepted!', 'success', 3000)
+  startAcceptedSequence()
+}
+
+function handleNoScreenYes() {
+  isNoScreen.value = false
+  handleYesClick()
 }
 
 // -------------------------------------------------------------
@@ -225,6 +309,7 @@ function jumpTo(step: 'lock' | 'q0' | 'q1' | 'q2' | 'suspense' | 'serious' | 'su
       currentQuestionIndex.value = questions.length
       isLoadingSuspense.value = false
       isAccepted.value = false
+      isNoScreen.value = false
       yesScale.value = 1
       noButtonPosition.value = { x: 0, y: 0 }
       noDodgeCount.value = 0
@@ -234,6 +319,7 @@ function jumpTo(step: 'lock' | 'q0' | 'q1' | 'q2' | 'suspense' | 'serious' | 'su
       currentQuestionIndex.value = questions.length
       isLoadingSuspense.value = false
       isAccepted.value = true
+      startAcceptedSequence()
       break
   }
 }
@@ -269,21 +355,36 @@ function setAnimationPreview(mood: Expression | null) {
     </button>
     <button
       type="button"
-      :class="['dev-toolbar-btn', isUnlocked && !isLoadingSuspense && !isAccepted && currentQuestionIndex === 0 ? 'is-active' : '']"
+      :class="[
+        'dev-toolbar-btn',
+        isUnlocked && !isLoadingSuspense && !isAccepted && currentQuestionIndex === 0
+          ? 'is-active'
+          : '',
+      ]"
       @click="jumpTo('q0')"
     >
       Q1
     </button>
     <button
       type="button"
-      :class="['dev-toolbar-btn', isUnlocked && !isLoadingSuspense && !isAccepted && currentQuestionIndex === 1 ? 'is-active' : '']"
+      :class="[
+        'dev-toolbar-btn',
+        isUnlocked && !isLoadingSuspense && !isAccepted && currentQuestionIndex === 1
+          ? 'is-active'
+          : '',
+      ]"
       @click="jumpTo('q1')"
     >
       Q2
     </button>
     <button
       type="button"
-      :class="['dev-toolbar-btn', isUnlocked && !isLoadingSuspense && !isAccepted && currentQuestionIndex === 2 ? 'is-active' : '']"
+      :class="[
+        'dev-toolbar-btn',
+        isUnlocked && !isLoadingSuspense && !isAccepted && currentQuestionIndex === 2
+          ? 'is-active'
+          : '',
+      ]"
       @click="jumpTo('q2')"
     >
       Q3
@@ -297,7 +398,10 @@ function setAnimationPreview(mood: Expression | null) {
     </button>
     <button
       type="button"
-      :class="['dev-toolbar-btn', isUnlocked && !isLoadingSuspense && !isAccepted && isSeriousQuestion ? 'is-active' : '']"
+      :class="[
+        'dev-toolbar-btn',
+        isUnlocked && !isLoadingSuspense && !isAccepted && isSeriousQuestion ? 'is-active' : '',
+      ]"
       @click="jumpTo('serious')"
     >
       Serious Q
@@ -310,7 +414,7 @@ function setAnimationPreview(mood: Expression | null) {
       Success
     </button>
 
-    <span class="dev-toolbar-title" style="margin-left: 8px;">Anim:</span>
+    <span class="dev-toolbar-title" style="margin-left: 8px">Anim:</span>
     <button
       type="button"
       :class="['dev-toolbar-btn', devMoodOverride === 'idle' ? 'is-active' : '']"
@@ -357,7 +461,7 @@ function setAnimationPreview(mood: Expression | null) {
       v-if="devMoodOverride !== null"
       type="button"
       class="dev-toolbar-btn"
-      style="opacity: 0.7;"
+      style="opacity: 0.7"
       @click="setAnimationPreview(null)"
     >
       ✕ auto
@@ -404,36 +508,52 @@ function setAnimationPreview(mood: Expression | null) {
             aria-describedby="password-instructions"
           />
 
-          <p
-            v-if="passwordError"
-            style="color: var(--color-primary); font-size: var(--font-size-sm);"
-            role="alert"
-          >
-            {{ passwordError }}
-          </p>
 
-          <button type="submit" class="btn" aria-label="Unlock application">
-            Unlock
-          </button>
+          <button type="submit" class="btn" aria-label="Unlock application">Unlock</button>
         </form>
       </section>
 
-      <!-- 2. Serious Question Accepted / Google Calendar Anniversary Screen -->
+      <!-- 2. No Screen (Shown after 20 dodge attempts) -->
+      <section
+        v-else-if="isNoScreen"
+        class="card auth-card no-screen"
+        role="region"
+        aria-labelledby="no-screen-title"
+      >
+        <div>
+          <h2 id="no-screen-title">{{ seriousQuestion.noScreenTitle }}</h2>
+          <div v-html="seriousQuestion.noScreenMessage" class="no-screen-body"></div>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-yes"
+          style="margin-top: 1rem"
+          @click="handleNoScreenYes"
+        >
+          Wait... actually YES!
+        </button>
+      </section>
+
+      <!-- 3. Serious Question Accepted / Post-Acceptance Screen -->
       <section
         v-else-if="isAccepted"
         class="card auth-card"
         role="region"
         aria-labelledby="success-title"
       >
-        <div>
-          <h1 id="success-title">{{ seriousQuestion.successTitle }}</h1>
-          <p>{{ seriousQuestion.successMessage }}</p>
-        </div>
+        <!-- Full post-acceptance content (badge, perks, stats, note, WhatsApp CTA) -->
+        <PostAcceptance />
 
-        <div style="display: flex; flex-direction: column; gap: var(--spacing-sm, 0.5rem); margin-block-start: var(--spacing-sm, 0.5rem);">
+        <!-- Google Calendar anniversary block -->
+        <div class="calendar-block">
           <label
             for="anniversary-date"
-            style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-muted);"
+            style="
+              font-size: var(--font-size-sm);
+              font-weight: var(--font-weight-medium);
+              color: var(--color-text-muted);
+            "
           >
             {{ calendarConfig.dateLabel }}
           </label>
@@ -449,12 +569,7 @@ function setAnimationPreview(mood: Expression | null) {
           />
 
           <!-- Connect directly to Google Calendar -->
-          <button
-            type="button"
-            class="btn btn--google"
-            style="margin-top: 0.5rem;"
-            @click="handleAddToGoogleCalendar"
-          >
+          <button type="button" class="btn btn--google" @click="handleAddToGoogleCalendar">
             {{ calendarConfig.buttonText }}
           </button>
         </div>
@@ -487,10 +602,14 @@ function setAnimationPreview(mood: Expression | null) {
       >
         <div>
           <span class="question-progress">Final Question</span>
-          <h2 id="serious-title" style="margin-top: 0.25rem;">
-            {{ seriousQuestion.title }}
-          </h2>
-          <p style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin-top: 0.5rem;">
+          <h2 id="serious-title" class="visually-hidden">Final Question</h2>
+          <p
+            style="
+              font-size: var(--font-size-lg);
+              font-weight: var(--font-weight-semibold);
+              margin-top: 0.5rem;
+            "
+          >
             {{ seriousQuestion.question }}
           </p>
         </div>
@@ -533,9 +652,9 @@ function setAnimationPreview(mood: Expression | null) {
           <span class="question-progress">
             Question {{ currentQuestionIndex + 1 }} of {{ questions.length }}
           </span>
-          <h2 :id="`question-${currentQuestionIndex + 1}-title`" style="margin-top: 0.25rem;">
+          <h3 :id="`question-${currentQuestionIndex + 1}-title`" style="margin-top: 0.25rem">
             {{ currentQuestion.question }}
-          </h2>
+          </h3>
         </div>
 
         <div class="question-options" role="group" aria-label="Answer options">
@@ -560,6 +679,43 @@ function setAnimationPreview(mood: Expression | null) {
 </template>
 
 <style scoped>
+/* Calendar block below PostAcceptance */
+.calendar-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 0.5rem);
+  padding-top: var(--spacing-md, 1rem);
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+  text-align: center;
+}
+
+/* No Screen */
+.no-screen {
+  animation: no-screen-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.no-screen-body {
+  margin-top: 0.75rem;
+  line-height: 1.7;
+  opacity: 0.85;
+}
+
+.no-screen-body p + p {
+  margin-top: 0.5rem;
+}
+
+@keyframes no-screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Toast Animation Transitions */
 .toast-slide-enter-active,
 .toast-slide-leave-active {

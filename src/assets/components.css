@@ -66,7 +66,9 @@
     color: var(--color-text);
     font-size: var(--font-size-base);
     text-align: center;
-    transition: border-color var(--transition-fast, 150ms ease), box-shadow var(--transition-fast, 150ms ease);
+    transition:
+      border-color var(--transition-fast, 150ms ease),
+      box-shadow var(--transition-fast, 150ms ease);
   }
 
   .input:focus {
@@ -112,18 +114,21 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 480px;
+    max-width: 550px;
     gap: var(--spacing-sm, 0.5rem);
+    margin-block: 100px 200px;
   }
 
   .auth-card {
     width: 100%;
-    max-width: 480px;
+    max-width: 550px;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg, 1.5rem);
     text-align: center;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 20px 25px -5px rgba(0, 0, 0, 0.15),
+      0 8px 10px -6px rgba(0, 0, 0, 0.1);
   }
 
   .auth-form {
@@ -195,17 +200,23 @@
   .btn-yes {
     position: relative;
     z-index: 1;
-    border: 3px solid #ffffff;
+    border: 1px solid #ffffff;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-    transition: transform 300ms ease, font-size 300ms ease, padding 300ms ease;
+    transition:
+      transform 300ms ease,
+      font-size 300ms ease,
+      padding 300ms ease;
   }
 
   .btn-no {
     position: relative;
     z-index: 20;
     background-color: var(--color-surface);
-    border: 2px solid var(--color-border);
-    transition: transform 200ms ease-out, top 200ms ease-out, left 200ms ease-out;
+    border: 1px solid var(--color-border);
+    transition:
+      transform 200ms ease-out,
+      top 200ms ease-out,
+      left 200ms ease-out;
     user-select: none;
     cursor: default;
   }
@@ -228,7 +239,9 @@
     border-radius: var(--radius-full, 9999px);
     font-weight: var(--font-weight-semibold, 600);
     font-size: var(--font-size-base, 1rem);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    box-shadow:
+      0 10px 25px -5px rgba(0, 0, 0, 0.3),
+      0 8px 10px -6px rgba(0, 0, 0, 0.2);
   }
 
   .toast--success {
@@ -267,9 +280,15 @@
     animation: suspense-bounce 1.4s infinite ease-in-out both;
   }
 
-  .suspense-dot:nth-child(1) { animation-delay: -0.32s; }
-  .suspense-dot:nth-child(2) { animation-delay: -0.16s; }
-  .suspense-dot:nth-child(3) { animation-delay: 0s; }
+  .suspense-dot:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+  .suspense-dot:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+  .suspense-dot:nth-child(3) {
+    animation-delay: 0s;
+  }
 
   /* Dev / Debugger Toolbar */
   .dev-toolbar {
@@ -326,7 +345,9 @@
 }
 
 @keyframes suspense-bounce {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0.3);
     opacity: 0.3;
   }
